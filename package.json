@@ -1,0 +1,29 @@
+{
+  "name": "toker.js",
+  "version": "0.0.3",
+  "description": "bmwcd.js dependency for caching and validating tokens",
+  "author": "Nicholas Berlette",
+  "homepage": "https://bmwcd.github.io/toker.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bmwcd/toker.js.git"
+  },
+  "license": "MIT",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "echo 'no tests? sounds like you passed!' && exit 1",
+    "lint": "standard",
+    "lint:fix": "standard --fix",
+    "lint:md": "standard-markdown",
+    "lint:md:fix": "standard-markdown --fix"
+  },
+  "dependencies": {
+    "js-yaml": "^3.14.1",
+    "moment": "^2.29.1"
+  },
+  "devDependencies": {
+    "standard": "^16.0.3",
+    "standard-markdown": "^6.0.0"
+  }
+}
