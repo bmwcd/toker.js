@@ -13,3 +13,5 @@ d88888 d888 888b 888 P  d88 88b 888 "      888 C88b
 Small class for caching and validating oauth2 tokens in bmwcd.js.
 
 Super ugly, so don't look too closely. Also it's probably broken.
+
+[![RememberJimmy.com](https://img.shields.io/badge/-RememberJimmy.com-3f3d56)](https://www.rememberjimmy.com)
