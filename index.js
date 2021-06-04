@@ -8,61 +8,79 @@ d88888 d888 888b 888 P  d88 88b 888 "      888 C88b
   bmwcd.github.io/toker.js                 8"
 */
 
-const moment = require('moment')
-const fs = require('fs')
-const yaml = require('js-yaml')
+import moment from 'moment'
+import { join } from 'path'
+import { openSync, closeSync, readFileSync, writeFileSync } from 'fs'
+import * as YAML from 'js-yaml'
 
-module.exports.Toker = class {
-  constructor (token = false, file = './token.json', minimum = 10) {
-    this.default = [moment().valueOf(), '']
+class Toker {
+  constructor (token = false, file = join(process.cwd(), 'token.json'), minimumAge = 10, defaultValue = [moment().valueOf(), '']) {
+    this.default = defaultValue
     this.token = token || this.default
     this.file = file
-    this.minimum = Number(minimum * 60 * 1000)
+    this.minimum = Number(minimumAge * 60 * 1000)
   }
 
-  get (key = 'token') { return this[key] }
-  set (value, key = 'token') { return (this[key] = value || false) }
+  get (key = 'token') {
+    return this[key]
+  }
 
-  json (data = this.token, replacer = null, spaces = 2) { return JSON.stringify(data, replacer, spaces) }
-  yaml (data = this.token, options = {}) { return yaml.dump(data, options) }
+  set (value, key = 'token') {
+    if (this[key] !== value) this[key] = value
+  }
 
-  check (token) {
+  json (data = this.token, replacer = null, spaces = 2) {
+    return JSON.stringify(data, replacer, spaces)
+  }
+
+  yaml (data = this.token, options = {}) {
+    return YAML.dump(data, options)
+  }
+
+  check (token = this.token) {
     if (/^[a-z0-9]{32}$/i.test(token[1]) && Math.abs(moment(token[0]).diff(moment())) >= this.minimum) return true
     else return false
   }
 
-  format (tokenData, setToken = false) {
+  format (tokenData, persist = false) {
     const token = [moment().add(tokenData.expires_in, 'seconds').valueOf(), tokenData.access_token]
-    if (setToken) this.token = token
+    if (persist) this.token = token
     return token
   }
 
   init () {
     try {
-      fs.closeSync(fs.openSync(this.file, 'a+'))
-      this.write(this.file, this.default)
+      closeSync(openSync(this.file, 'a+'))
+      this.write(this.file, this.default, 'json')
     } catch (error) {
       throw console.error(error)
     }
     return this.token
   }
 
-  read () {
+  parseFile (type = 'json', file = this.file) {
+    const data = readFileSync(file, 'utf-8')
+    if (type === 'json') return JSON.parse(data)
+    else if (type === 'yaml') return YAML.parse(data)
+    else return data
+  }
+
+  read (type = 'json') {
     try {
-      this.token = JSON.parse(fs.readFileSync(this.file, 'utf-8'))
+      this.token = this.parseFile(type, this.file)
     } catch (error) {
       this.init()
-      this.token = JSON.parse(fs.readFileSync(this.file, 'utf-8')) || console.error(error)
+      this.token = this.parseFile(type) || console.error(error)
     }
     return this.token
   }
 
   write (file = this.file, data = this.token, type = 'json') {
     try {
-      data = type === 'yaml' ? this.yaml(data, {}) : this.json(data)
-      return fs.writeFileSync(file, data, 'utf8')
+      return writeFileSync(file, type === 'yaml' ? this.yaml(data) : this.json(data), 'utf8') || false
     } catch (error) {
       throw console.error(error)
     }
   }
 }
+export { Toker }
