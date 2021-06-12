@@ -9,21 +9,38 @@ d88888 d888 888b 888 P  d88 88b 888 "      888 C88b
 */
 
 import dayjs from 'dayjs'
-import { join } from 'path'
-import { openSync, closeSync, readFileSync, writeFileSync } from 'fs'
+import { resolve } from 'path'
+import { openSync, closeSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { randomBytes } from 'crypto'
+import fastJson from 'fast-json-stringify'
 
-class Toker {
-  constructor (
-    token = false, 
-    file = join(process.cwd(), 'token.json'), 
-    minimum = 10,
-    defaultToken = [dayjs().valueOf(), randomBytes(32)]
-  ) {
-    this.default = defaultToken
-    this.token = token || this.default
-    this.file = file
-    this.minimum = Number(minimum * 60 * 1000)
+export default class Toker {
+  constructor (options = { dir: 'data', file: 'token.json', tz: -7 }) {
+    this.default = {
+      token_data: randomBytes(32),
+      expiration: dayjs().add(5, 'minutes').toISOString()
+    }
+    this.schema = {
+      title: 'Token Schema',
+      type: 'object',
+      properties: {
+        token_data: {
+          type: 'string',
+          pattern: '[a-zA-Z0-9]{32}'
+        },
+        expiration: {
+          type: 'string',
+          format: 'date-time',
+          keywords: {
+            minimumFormat: dayjs().add(2, 'minutes').toISOString(),
+            maximumFormat: dayjs('tomorrow').toISOString()
+          }
+        }
+      },
+      required: ['token_data', 'expiration']
+    }
+    this.token = this.default
+    this.file = this.checkfile(this.dir, options.file)
   }
 
   get (key = 'token') {
@@ -34,55 +51,62 @@ class Toker {
     if (this[key] !== value) this[key] = value
   }
 
-  json (data = this.token, replacer = null, spaces = 2) {
-    return JSON.stringify(data, replacer, spaces)
+  stringify (args) {
+    return fastJson(this.schema)(...args)
+  }
+
+  parse (json) {
+    return JSON.parse(json) || json
   }
 
   check (token = this.token) {
-    if (/^[a-z0-9]{32}$/i.test(token[1]) === false) return false
-    if (dayjs(token[0]).diff(dayjs())) <= this.minimum) return false
-    return true
+    return this.stringify(token) || false
   }
 
-  format (tokenData, persist = false) {
-    const token = [dayjs().add(tokenData.expires_in, 'seconds').valueOf(), tokenData.access_token]
-    if (persist) this.token = token
-    return token
+  format (token, persist = false) {
+    const validated = this.parse(this.stringify(token))
+    if (persist) this.token = validated || this.default
+    return validated || false
   }
 
-  init () {
-    try {
-      closeSync(openSync(this.file, 'a+'))
-      this.write(this.file, this.default, 'json')
-    } catch (error) {
-      throw console.error(error)
+  checkdir (dir) {
+    dir = resolve(process.cwd(), dir)
+    if (!existsSync(dir)) {
+      try {
+        if (mkdirSync(dir, { recursive: true })) return dir
+      } catch (e) {}
     }
-    return this.token
+    return false
   }
 
-  parseFile (type = 'json', file = this.file) {
-    const data = readFileSync(file, 'utf-8')
-    if (type === 'json') return JSON.parse(data)
-    else if (type === 'yaml') return YAML.parse(data)
-    else return data
-  }
-
-  read (type = 'json') {
-    try {
-      this.token = this.parseFile(type, this.file)
-    } catch (error) {
-      this.init()
-      this.token = this.parseFile(type) || console.error(error)
+  checkfile (dir, file) {
+    file = resolve(this.checkdir(dir), file)
+    if (!existsSync(file)) {
+      try {
+        closeSync(openSync(file, 'a+'))
+        if (this.write(file, this.default)) return file
+      } catch (e) {}
     }
-    return this.token
+    return false
   }
 
-  write (file = this.file, data = this.token, type = 'json') {
+  parseFile (file = this.file) {
+    return this.parse(readFileSync(this.checkfile(file), 'utf-8'))
+  }
+
+  read (file = this.file) {
     try {
-      return writeFileSync(file, type === 'yaml' ? this.yaml(data) : this.json(data), 'utf8') || false
-    } catch (error) {
-      throw console.error(error)
-    }
+      this.token = this.parseFile(file)
+      this.token.expiration = dayjs(this.token.expiration)
+      return this.token
+    } catch (e) {}
+    return false
+  }
+
+  write (file = this.file, data = this.token) {
+    try {
+      data = this.stringify(data) || this.default
+      return writeFileSync(file, data, 'utf8') ? this.token : false
+    } catch (e) {}
   }
 }
-export { Toker }

@@ -12,6 +12,7 @@
   "main": "toker.js",
   "type": "module",
   "dependencies": {
-    "dayjs": "^1.10.5"
+    "dayjs": "^1.10.5",
+    "fast-json-stringify": "^2.7.6"
   }
 }
