@@ -1,6 +1,6 @@
 {
   "name": "toker.js",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "bmwcd.js dependency for caching and validating tokens",
   "author": "Nicholas Berlette",
   "homepage": "https://bmwcd.github.io/toker.js",
