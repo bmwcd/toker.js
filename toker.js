@@ -8,17 +8,22 @@ d88888 d888 888b 888 P  d88 88b 888 "      888 C88b
   bmwcd.github.io/toker.js                 8"
 */
 
-import moment from 'moment'
+import dayjs from 'dayjs'
 import { join } from 'path'
 import { openSync, closeSync, readFileSync, writeFileSync } from 'fs'
-import * as YAML from 'js-yaml'
+import { randomBytes } from 'crypto'
 
 class Toker {
-  constructor (token = false, file = join(process.cwd(), 'token.json'), minimumAge = 10, defaultValue = [moment().valueOf(), '']) {
-    this.default = defaultValue
+  constructor (
+    token = false, 
+    file = join(process.cwd(), 'token.json'), 
+    minimum = 10,
+    defaultToken = [dayjs().valueOf(), randomBytes(32)]
+  ) {
+    this.default = defaultToken
     this.token = token || this.default
     this.file = file
-    this.minimum = Number(minimumAge * 60 * 1000)
+    this.minimum = Number(minimum * 60 * 1000)
   }
 
   get (key = 'token') {
@@ -33,17 +38,14 @@ class Toker {
     return JSON.stringify(data, replacer, spaces)
   }
 
-  yaml (data = this.token, options = {}) {
-    return YAML.dump(data, options)
-  }
-
   check (token = this.token) {
-    if (/^[a-z0-9]{32}$/i.test(token[1]) && Math.abs(moment(token[0]).diff(moment())) >= this.minimum) return true
-    else return false
+    if (/^[a-z0-9]{32}$/i.test(token[1]) === false) return false
+    if (dayjs(token[0]).diff(dayjs())) <= this.minimum) return false
+    return true
   }
 
   format (tokenData, persist = false) {
-    const token = [moment().add(tokenData.expires_in, 'seconds').valueOf(), tokenData.access_token]
+    const token = [dayjs().add(tokenData.expires_in, 'seconds').valueOf(), tokenData.access_token]
     if (persist) this.token = token
     return token
   }
